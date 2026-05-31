@@ -1,0 +1,126 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum PropertyType {
+  LAND
+  PLOT
+  AGRICULTURAL
+  COMMERCIAL
+  RESIDENTIAL
+}
+
+enum ListingStatus {
+  ACTIVE
+  UNDER_REVIEW
+  REJECTED
+  SOLD
+}
+
+enum ConsultationStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(BUYER)
+  properties    Property[]     @relation("OwnerProperties")
+  consultations Consultation[] @relation("BuyerConsultations")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Property {
+  id                String        @id @default(uuid())
+  title             String
+  propertyType      PropertyType  @default(PLOT)
+  state             String
+  district          String
+  city              String
+  locality          String
+  address           String
+  surveyNumber      String
+  area              Float
+  areaUnit          String
+  roadAccess        String
+  facingDirection   String
+  shape             String
+  askingPrice       Float
+  pricePerUnit      Float
+  openToNegotiation Boolean       @default(true)
+  paymentTerms      String?
+  status            ListingStatus @default(UNDER_REVIEW)
+  viewsCount        Int           @default(0)
+  inquiryCount      Int           @default(0)
+  verified          Boolean       @default(false)
+  images            String[]
+  documents         Json          // Array of objects {name, status, file}
+  priceHistory      Json          // Array of objects {year, price}
+  latitude          Float
+  longitude         Float
+  videoLink         String?
+  ownerId           String
+  owner             User          @relation("OwnerProperties", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model Expert {
+  id                   String         @id @default(uuid())
+  name                 String
+  photo                String
+  specialization       String
+  city                 String
+  state                String
+  languages            String[]
+  experienceYears      Int
+  rating               Float
+  bio                  String
+  pastDealsCount       Int            @default(0)
+  certifications       String[]
+  availabilityCalendar Json           // Object mapping days to time slot arrays
+  consultations        Consultation[] @relation("ExpertConsultations")
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model Consultation {
+  id             String             @id @default(uuid())
+  expertId       String
+  expert         Expert             @relation("ExpertConsultations", fields: [expertId], references: [id], onDelete: Cascade)
+  buyerId        String
+  buyer          User               @relation("BuyerConsultations", fields: [buyerId], references: [id], onDelete: Cascade)
+  day            String
+  time           String
+  queryType      String
+  queryText      String?
+  reference      String             @unique
+  status         ConsultationStatus @default(PENDING)
+  link           String?
+  createdAt      DateTime           @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
