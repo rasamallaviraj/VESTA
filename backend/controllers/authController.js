@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const prisma = require('../services/prismaClient');
+const User = require('../models/User');
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -18,39 +18,24 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Please enter all fields' });
         }
 
-        const userExists = await prisma.user.findUnique({
-            where: { email }
-        });
-
+        const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Hash password before saving
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const user = await prisma.user.create({
-            data: {
-                name,
-                email,
-                password: hashedPassword,
-                role: role || 'BUYER'
-            }
-        });
+        const user = await User.create({ name, email, password, role });
 
         if (user) {
             res.status(201).json({
-                id: user.id,
-                _id: user.id, // For backward compatibility
+                _id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                token: generateToken(user.id),
+                token: generateToken(user._id),
             });
         }
     } catch (error) {
-        console.error("Register Error:", error);
+        console.error('Register Error:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -65,24 +50,21 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ message: 'Please enter all fields' });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { email }
-        });
+        const user = await User.findOne({ email });
 
-        if (user && (await bcrypt.compare(password, user.password))) {
+        if (user && (await user.matchPassword(password))) {
             res.json({
-                id: user.id,
-                _id: user.id,
+                _id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                token: generateToken(user.id),
+                token: generateToken(user._id),
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
         }
     } catch (error) {
-        console.error("Login Error:", error);
+        console.error('Login Error:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
