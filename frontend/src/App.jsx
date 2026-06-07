@@ -143,7 +143,7 @@ const AppContent = () => {
   }, []);
 
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL}>
       <Navbar onOpenAuth={(view) => setAuthModal({ isOpen: true, view })} authModal={authModal} setAuthModal={setAuthModal} />
       
       <Routes>
