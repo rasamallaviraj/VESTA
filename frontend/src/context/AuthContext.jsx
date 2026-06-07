@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
+const BASE = import.meta.env.VITE_API_URL || '';
+
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -21,7 +23,7 @@ export const AuthProvider = ({ children }) => {
           setUser(JSON.parse(storedUser));
           
           // Verify on backend
-          const res = await fetch('/api/user/profile', {
+          const res = await fetch(`${BASE}/api/user/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -49,7 +51,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, requestedRole = 'BUYER') => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -94,7 +96,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password, requestedRole = 'BUYER') => {
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, role: requestedRole })

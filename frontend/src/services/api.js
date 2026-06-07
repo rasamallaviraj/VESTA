@@ -1,3 +1,4 @@
+const BASE = import.meta.env.VITE_API_URL || '';
 // Rich Seed Data for Offline Fallbacks
 export const mockProperties = [
   {
@@ -317,7 +318,7 @@ export const api = {
   getProperties: async (filters = {}) => {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const res = await fetch(`/api/properties?${queryParams}`);
+      const res = await fetch(`${BASE}/api/properties?${queryParams}`);
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("Backend offline. Running property filters locally.");
@@ -355,7 +356,7 @@ export const api = {
 
   getPropertyById: async (id) => {
     try {
-      const res = await fetch(`/api/properties/${id}`);
+      const res = await fetch(`${BASE}/api/properties/${id}`);
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("Backend offline. Resolving single property locally.");
@@ -365,7 +366,7 @@ export const api = {
 
   createProperty: async (propertyData, token) => {
     try {
-      const res = await fetch('/api/properties', {
+      const res = await fetch(`${BASE}/api/properties`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -397,7 +398,7 @@ export const api = {
   getExperts: async (filters = {}) => {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const res = await fetch(`/api/experts?${queryParams}`);
+      const res = await fetch(`${BASE}/api/experts?${queryParams}`);
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("Backend experts search offline. Resolving mock experts.");
@@ -415,7 +416,7 @@ export const api = {
 
   getExpertById: async (id) => {
     try {
-      const res = await fetch(`/api/experts/${id}`);
+      const res = await fetch(`${BASE}/api/experts/${id}`);
       if (res.ok) return await res.json();
     } catch (e) {
       console.warn("Backend expert lookup offline. Resolving mock expert.");
@@ -425,7 +426,7 @@ export const api = {
 
   bookConsultation: async (bookingData, token) => {
     try {
-      const res = await fetch('/api/experts/book', {
+      const res = await fetch(`${BASE}/api/experts/book`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -448,7 +449,7 @@ export const api = {
   // Contacts submissions
   submitContactForm: async (formData) => {
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch(`${BASE}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -463,7 +464,7 @@ export const api = {
   // Admin Pending Panel
   getPendingListings: async (token) => {
     try {
-      const res = await fetch('/api/admin/listings', {
+      const res = await fetch(`${BASE}/api/admin/listings`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) return await res.json();
@@ -475,7 +476,7 @@ export const api = {
 
   updateListingStatus: async (id, status, reason = '', token) => {
     try {
-      const res = await fetch(`/api/admin/listings/${id}`, {
+      const res = await fetch(`${BASE}/api/admin/listings/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
