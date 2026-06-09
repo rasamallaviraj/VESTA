@@ -24,3 +24,5 @@ mongoose.connect(MONGO_URI)
         app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
     })
     .catch(err => console.error('❌ MongoDB connection error:', err));
+app.use('/api/properties', require('./routes/propertyRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));

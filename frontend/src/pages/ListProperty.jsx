@@ -8,6 +8,8 @@ import {
   Eye, Check, ChevronRight, ChevronLeft, ShieldAlert, AlertTriangle 
 } from 'lucide-react';
 
+const BASE = import.meta.env.VITE_API_URL || '';
+
 const IndianStates = ['Telangana', 'Karnataka', 'Maharashtra', 'Uttar Pradesh'];
 
 const districtMapping = {
@@ -49,11 +51,8 @@ const ListProperty = () => {
     documents: []
   });
 
-  const [uploadedImages, setUploadedImages] = useState([
-    'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80'
-  ]); // Default mock images pre-loaded
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   const [uploadedDocs, setUploadedDocs] = useState({});
 
@@ -158,6 +157,37 @@ const ListProperty = () => {
       documents: prev.documents.map(d => d.name === docName ? { ...d, status: 'Uploaded ✓' } : d)
     }));
     addNotification(`Document "${docName}" secure verification loaded successfully!`, 'success');
+  };
+
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    const formDataPayload = new FormData();
+    files.forEach(file => {
+      formDataPayload.append('files', file);
+    });
+
+    try {
+      const res = await fetch(`${BASE}/api/upload`, {
+        method: 'POST',
+        body: formDataPayload
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUploadedImages(data.urls || []);
+        addNotification("Media files uploaded successfully!", "success");
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Upload failed");
+      }
+    } catch (err) {
+      console.error(err);
+      addNotification(err.message || "Failed to upload media files.", "error");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleFormSubmission = async (e) => {
@@ -429,35 +459,81 @@ const ListProperty = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <h3 style={{ margin: 0, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }} className="text-gradient">Step 2: Media & Geographic Boundaries</h3>
               
-              {/* Drag n drop media mock zone */}
+              {/* Real file upload zone */}
               <div className="form-group">
-                <label>Upload Land Images (Min 3 required)</label>
-                <div 
-                  style={{
-                    border: '2px dashed rgba(255,255,255,0.15)',
-                    padding: '2rem',
-                    borderRadius: '12px',
-                    textAlign: 'center',
-                    background: 'rgba(255,255,255,0.02)',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => addNotification("Simulated upload zone: 3 mock land photographs have been loaded successfully for your listing.", 'success')}
-                >
-                  <UploadCloud size={32} style={{ color: 'var(--text-secondary)', marginBottom: '8px' }} />
-                  <div style={{ fontWeight: 'bold' }}>Drag and Drop Photos Here</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>PNG or JPEG formats up to 10MB sizes</div>
+                <label>Upload Land Images/Videos</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/png, image/jpeg, image/jpg, video/mp4"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                    id="property-media-upload"
+                    disabled={uploading}
+                  />
+                  <label
+                    htmlFor="property-media-upload"
+                    style={{
+                      display: 'block',
+                      border: '2px dashed rgba(255,255,255,0.15)',
+                      padding: '2rem',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                      background: 'rgba(255,255,255,0.02)',
+                      cursor: uploading ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.3s ease',
+                      borderColor: uploading ? 'var(--accent-secondary)' : 'rgba(255,255,255,0.15)'
+                    }}
+                  >
+                    {uploading ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          border: '3px solid rgba(255,255,255,0.1)',
+                          borderTop: '3px solid var(--accent-secondary)',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite'
+                        }}></div>
+                        <style>{`
+                          @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                          }
+                        `}</style>
+                        <div style={{ fontWeight: 'bold', color: 'var(--accent-secondary)' }}>Uploading Media Files...</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Processing and uploading to Cloudinary</div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <UploadCloud size={32} style={{ color: 'var(--text-secondary)', marginBottom: '8px' }} />
+                        <div style={{ fontWeight: 'bold', color: 'white' }}>Choose Files to Upload</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>PNG, JPG, JPEG, or MP4 formats</div>
+                      </div>
+                    )}
+                  </label>
                 </div>
               </div>
 
-              {/* Display loaded photo thumbnails */}
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {uploadedImages.map((img, idx) => (
-                  <div key={idx} style={{ position: 'relative', width: '90px', height: '70px', borderRadius: '6px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <img src={img} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <span style={{ position: 'absolute', bottom: '2px', left: '2px', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '0.65rem', padding: '0 4px', borderRadius: '2px' }}>#{idx+1}</span>
-                  </div>
-                ))}
-              </div>
+              {/* Display loaded photo/video previews */}
+              {uploadedImages.length > 0 && (
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {uploadedImages.map((url, idx) => {
+                    const isVideo = url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.mov') || url.includes('/video/');
+                    return (
+                      <div key={idx} style={{ position: 'relative', width: '90px', height: '70px', borderRadius: '6px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        {isVideo ? (
+                          <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted loop playsInline />
+                        ) : (
+                          <img src={url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        )}
+                        <span style={{ position: 'absolute', bottom: '2px', left: '2px', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '0.65rem', padding: '0 4px', borderRadius: '2px' }}>#{idx+1}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Video URL */}
               <div className="form-group">
@@ -630,7 +706,21 @@ const ListProperty = () => {
               <h4 style={{ margin: '1rem 0 0' }}>Live Explorer Grid Card Preview</h4>
               <div style={{ maxWidth: '360px', alignSelf: 'center', width: '100%' }}>
                 <div className="card glass" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <img src={uploadedImages[0]} alt="preview" style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
+                  {uploadedImages && uploadedImages.length > 0 ? (
+                    (() => {
+                      const url = uploadedImages[0];
+                      const isVideo = url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.mov') || url.includes('/video/');
+                      return isVideo ? (
+                        <video src={url} style={{ width: '100%', height: '160px', objectFit: 'cover' }} controls muted />
+                      ) : (
+                        <img src={url} alt="preview" style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
+                      );
+                    })()
+                  ) : (
+                    <div style={{ width: '100%', height: '160px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                      No media uploaded
+                    </div>
+                  )}
                   <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ fontSize: '0.7rem', color: 'var(--accent-secondary)', fontWeight: 'bold' }}>{formData.locality || 'Locality'}, {formData.city || 'City'}</div>
                     <h5 style={{ fontSize: '1rem', margin: 0, color: 'white' }}>{formData.title || 'Property Title'}</h5>
