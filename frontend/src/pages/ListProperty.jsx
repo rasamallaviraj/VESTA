@@ -55,6 +55,9 @@ const ListProperty = () => {
   const [uploading, setUploading] = useState(false);
 
   const [uploadedDocs, setUploadedDocs] = useState({});
+  const fileInputRef = useRef(null);
+  const [activeDocName, setActiveDocName] = useState(null);
+  const [uploadingDocs, setUploadingDocs] = useState({});
 
   const mapContainerRef = useRef(null);
   const pinMapInstance = useRef(null);
@@ -150,13 +153,55 @@ const ListProperty = () => {
     };
   }, [currentStep]);
 
-  const handleDocumentMockUpload = (docName) => {
-    setUploadedDocs(prev => ({ ...prev, [docName]: true }));
-    setFormData(prev => ({
-      ...prev,
-      documents: prev.documents.map(d => d.name === docName ? { ...d, status: 'Uploaded ✓' } : d)
-    }));
-    addNotification(`Document "${docName}" secure verification loaded successfully!`, 'success');
+  const triggerDocumentUpload = (docName) => {
+    setActiveDocName(docName);
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleDocumentRealUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeDocName) return;
+
+    const filename = file.name;
+    const docName = activeDocName;
+
+    setUploadingDocs(prev => ({ ...prev, [docName]: true }));
+    const formDataPayload = new FormData();
+    formDataPayload.append('files', file);
+
+    try {
+      const res = await fetch(`${BASE}/api/upload`, {
+        method: 'POST',
+        body: formDataPayload
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const fileUrl = data.urls[0];
+
+        setUploadedDocs(prev => ({ ...prev, [docName]: fileUrl }));
+        setFormData(prev => ({
+          ...prev,
+          documents: prev.documents.map(d => 
+            d.name === docName 
+              ? { ...d, status: 'Uploaded ✓', file: fileUrl, filename } 
+              : d
+          )
+        }));
+        addNotification(`Document "${docName}" uploaded successfully!`, 'success');
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Upload failed");
+      }
+    } catch (err) {
+      console.error(err);
+      addNotification(err.message || `Failed to upload "${docName}".`, "error");
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [docName]: false }));
+      setActiveDocName(null);
+      e.target.value = '';
+    }
   };
 
   const handleFileChange = async (e) => {
@@ -630,6 +675,15 @@ const ListProperty = () => {
                 To earn our gold **"100% Verified"** trust badge, please upload clear scans of original land ownership papers.
               </p>
 
+              {/* Hidden file input for document picker */}
+              <input 
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept=".pdf, image/png, image/jpeg, image/jpg"
+                onChange={handleDocumentRealUpload}
+              />
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {formData.documents.map((doc, idx) => (
                   <div 
@@ -651,20 +705,23 @@ const ListProperty = () => {
                         <span>{doc.name}</span>
                         {doc.required && <span style={{ color: 'var(--accent-error)', fontSize: '0.75rem' }}>*Required</span>}
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Secured registry checklist review</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {doc.filename ? `File: ${doc.filename}` : 'Secured registry checklist review'}
+                      </span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: uploadedDocs[doc.name] ? 'var(--accent-secondary)' : 'var(--text-secondary)' }}>
-                        {uploadedDocs[doc.name] ? 'Uploaded ✓' : 'Required'}
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: uploadingDocs[doc.name] ? 'var(--accent-secondary)' : (uploadedDocs[doc.name] ? 'var(--accent-secondary)' : 'var(--text-secondary)') }}>
+                        {uploadingDocs[doc.name] ? 'Uploading...' : (uploadedDocs[doc.name] ? 'Uploaded ✓' : 'Required')}
                       </span>
                       <button 
                         type="button" 
                         className={`btn btn-sm ${uploadedDocs[doc.name] ? 'btn-outline' : 'btn-primary'}`}
-                        onClick={() => handleDocumentMockUpload(doc.name)}
+                        onClick={() => triggerDocumentUpload(doc.name)}
                         style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                        disabled={uploadingDocs[doc.name]}
                       >
-                        {uploadedDocs[doc.name] ? 'Re-upload' : 'Select PDF Scan'}
+                        {uploadingDocs[doc.name] ? 'Uploading...' : (uploadedDocs[doc.name] ? 'Re-upload' : 'Select PDF Scan')}
                       </button>
                     </div>
                   </div>
