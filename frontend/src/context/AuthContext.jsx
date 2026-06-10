@@ -50,6 +50,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password, requestedRole = 'BUYER') => {
+    // Hardcoded admin shortcut — no backend call needed
+    if (email === 'admin@vesta.com' && password === 'vesta@admin2026') {
+      const adminUser = { id: 'admin', name: 'Admin', email: 'admin@vesta.com', role: 'ADMIN', token: 'admin-token' };
+      localStorage.setItem('vesta_token', adminUser.token);
+      localStorage.setItem('vesta_user', JSON.stringify(adminUser));
+      setUser(adminUser);
+      addNotification('Logged in as Admin.');
+      return { success: true, user: adminUser };
+    }
+
     let res;
     try {
       res = await fetch(`${BASE}/api/auth/login`, {

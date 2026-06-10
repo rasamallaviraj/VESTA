@@ -1,98 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
-  ShieldCheck, Eye, CheckCircle, AlertOctagon, XCircle,
-  FileText, ShieldAlert, Mail, MessageSquare, LogOut, Lock
+  ShieldCheck, CheckCircle, AlertOctagon, XCircle,
+  FileText, ShieldAlert, Mail, MessageSquare, LogOut, ShieldOff
 } from 'lucide-react';
 
 const BASE = import.meta.env.VITE_API_URL || '';
-const ADMIN_PASSWORD = 'vesta@admin2026';
-const ADMIN_KEY = 'vesta_admin';
 
-// ─── Password Gate ─────────────────────────────────────────────────────────────
-const PasswordGate = ({ onUnlock }) => {
-  const [pwd, setPwd] = useState('');
-  const [error, setError] = useState('');
-  const inputRef = useRef(null);
-
-  useEffect(() => { inputRef.current?.focus(); }, []);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (pwd === ADMIN_PASSWORD) {
-      localStorage.setItem(ADMIN_KEY, 'true');
-      onUnlock();
-    } else {
-      setError('Incorrect password. Access denied.');
-      setPwd('');
-      inputRef.current?.focus();
-    }
-  };
-
-  return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', paddingTop: '6rem', paddingBottom: '6rem'
-    }}>
-      <div className="glass" style={{
-        width: '100%', maxWidth: '400px', padding: '3rem 2.5rem',
-        borderRadius: '16px', textAlign: 'center'
-      }}>
-        <div style={{
-          width: '56px', height: '56px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, rgba(79,70,229,0.3), rgba(139,92,246,0.3))',
-          border: '1px solid rgba(79,70,229,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 1.5rem'
-        }}>
-          <Lock size={24} style={{ color: 'var(--accent-primary)' }} />
-        </div>
-
-        <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.6rem' }} className="text-gradient">
-          Admin Access
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-          Enter your admin password to access the Compliance Console.
-        </p>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <input
-            ref={inputRef}
-            type="password"
-            placeholder="Admin password"
-            value={pwd}
-            onChange={(e) => { setPwd(e.target.value); setError(''); }}
-            style={{
-              padding: '0.85rem 1rem', borderRadius: '10px',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              color: 'white', outline: 'none', fontSize: '1rem',
-              textAlign: 'center', letterSpacing: '0.1em'
-            }}
-          />
-
-          {error && (
-            <p style={{ color: 'var(--accent-error)', fontSize: '0.82rem', margin: 0 }}>{error}</p>
-          )}
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ marginTop: '0.25rem' }}
-          >
-            Unlock Dashboard
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
 
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 const AdminListings = () => {
-  const { addNotification } = useAuth();
-
-  // Auth gate state
-  const [unlocked, setUnlocked] = useState(() => localStorage.getItem(ADMIN_KEY) === 'true');
+  const { user, logout, addNotification } = useAuth();
 
   // Tab state
   const [activeTab, setActiveTab] = useState('listings'); // 'listings' | 'concerns'
@@ -143,25 +61,21 @@ const AdminListings = () => {
   };
 
   useEffect(() => {
-    if (!unlocked) return;
+    if (user?.role !== 'ADMIN') return;
     loadPending();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlocked]);
+  }, [user]);
 
   useEffect(() => {
-    if (!unlocked) return;
+    if (user?.role !== 'ADMIN') return;
     if (activeTab === 'concerns' && concerns.length === 0) {
       loadConcerns();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, unlocked]);
+  }, [activeTab, user]);
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  const handleAdminLogout = () => {
-    localStorage.removeItem(ADMIN_KEY);
-    setUnlocked(false);
-  };
 
   const updateListingStatus = async (id, status, reason = '') => {
     const res = await fetch(`${BASE}/api/properties/${id}/status`, {
@@ -202,10 +116,20 @@ const AdminListings = () => {
     addNotification(`Requested supplementary documents for "${title}".`, 'success');
   };
 
-  // ── Gate ──────────────────────────────────────────────────────────────────
+  // ── Role Gate ─────────────────────────────────────────────────────────────
 
-  if (!unlocked) {
-    return <PasswordGate onUnlock={() => setUnlocked(true)} />;
+  if (!user || user.role !== 'ADMIN') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="glass text-center" style={{ padding: '4rem 3rem', maxWidth: '420px', borderRadius: '16px' }}>
+          <ShieldOff size={52} style={{ color: 'var(--accent-error)', marginBottom: '1.25rem' }} />
+          <h2 style={{ color: 'var(--accent-error)', marginBottom: '0.5rem' }}>Access Denied</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            You do not have permission to access this page. Please log in with an admin account.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // ── Tab: Shared tab bar ───────────────────────────────────────────────────
@@ -426,7 +350,7 @@ const AdminListings = () => {
             </p>
           </div>
           <button
-            onClick={handleAdminLogout}
+            onClick={logout}
             className="btn btn-outline btn-sm"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', alignSelf: 'center' }}
           >

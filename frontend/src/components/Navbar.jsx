@@ -47,29 +47,28 @@ const Navbar = ({ onOpenAuth, authModal, setAuthModal }) => {
     setAuthLoading(true);
     setAuthError('');
 
-    try {
-      let res;
-      if (type === 'login') {
-        res = await login(authForm.email, authForm.password, authForm.role);
-      } else {
-        res = await register(authForm.name, authForm.email, authForm.password, authForm.role);
-      }
+    let res;
+    if (type === 'login') {
+      res = await login(authForm.email, authForm.password, authForm.role);
+    } else {
+      res = await register(authForm.name, authForm.email, authForm.password, authForm.role);
+    }
 
-      if (res.success) {
-        setAuthModal({ isOpen: false, view: 'login' });
-        // Redirect based on role
-        if (res.user.role === 'SELLER') {
-          navigate('/dashboard/seller');
-        } else if (res.user.role === 'ADMIN') {
-          navigate('/admin/listings');
-        } else {
-          navigate('/dashboard/buyer');
-        }
-      }
-    } catch (err) {
-      setAuthError(err.message || 'Authentication failed. Please try again.');
-    } finally {
-      setAuthLoading(false);
+    setAuthLoading(false);
+
+    if (!res.success) {
+      setAuthError(res.message || 'Authentication failed. Please try again.');
+      return;
+    }
+
+    setAuthModal({ isOpen: false, view: 'login' });
+    // Redirect based on role
+    if (res.user.role === 'SELLER') {
+      navigate('/dashboard/seller');
+    } else if (res.user.role === 'ADMIN') {
+      navigate('/admin/listings');
+    } else {
+      navigate('/dashboard/buyer');
     }
   };
 
