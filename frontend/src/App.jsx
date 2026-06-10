@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -24,8 +24,16 @@ import CompareBar from './components/CompareBar';
 
 const AppContent = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [compareList, setCompareList] = useState([]);
   const [authModal, setAuthModal] = useState({ isOpen: false, view: 'login' });
+
+  // Redirect admin users to the admin panel automatically
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      navigate('/admin/listings');
+    }
+  }, [user]);
 
   // Floating Compare Handlers
   const handleToggleCompare = (property) => {
