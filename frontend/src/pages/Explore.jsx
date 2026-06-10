@@ -358,10 +358,10 @@ const Explore = ({ compareList, onToggleCompare }) => {
             <div className="grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
               {properties.map(property => (
                 <PropertyCard 
-                  key={property.id} 
+                  key={property._id || property.id} 
                   property={property} 
                   onToggleCompare={onToggleCompare}
-                  isCompared={!!compareList.find(c => c.id === property.id)}
+                  isCompared={!!compareList.find(c => (c._id || c.id) === (property._id || property.id))}
                 />
               ))}
             </div>

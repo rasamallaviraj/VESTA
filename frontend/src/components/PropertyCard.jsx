@@ -205,7 +205,7 @@ const PropertyCard = ({ property, onToggleCompare, isCompared }) => {
         {/* Interactive Action Buttons */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '1rem' }}>
           <Link 
-            to={`/property/${property.id}`} 
+            to={`/property/${property._id || property.id}`} 
             className="btn btn-outline btn-sm text-center" 
             style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
           >

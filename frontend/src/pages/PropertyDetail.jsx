@@ -51,8 +51,10 @@ const PropertyDetail = () => {
       try {
         let data = null;
         if (id && id.startsWith('prop-')) {
+          // Mock data — find locally
           data = mockProperties.find(p => p.id === id);
-        } else if (id && /^[0-9a-fA-F]{24}$/.test(id)) {
+        } else if (id) {
+          // Real MongoDB property — fetch from backend
           const res = await fetch(`${BASE}/api/properties/${id}`);
           if (res.ok) {
             data = await res.json();
