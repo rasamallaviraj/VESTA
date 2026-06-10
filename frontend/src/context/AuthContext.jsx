@@ -50,91 +50,85 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password, requestedRole = 'BUYER') => {
+    let res;
     try {
-      const res = await fetch(`${BASE}/api/auth/login`, {
+      res = await fetch(`${BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        const loggedUser = {
-          id: data._id || data.id,
-          name: data.name,
-          email: data.email,
-          role: data.role || requestedRole, // Handle dynamic roles
-          token: data.token
-        };
-        localStorage.setItem('vesta_token', data.token);
-        localStorage.setItem('vesta_user', JSON.stringify(loggedUser));
-        setUser(loggedUser);
-        addNotification(`Logged in successfully as ${loggedUser.name}!`);
-        return { success: true, user: loggedUser };
-      } else {
-        throw new Error(data.message || 'Login failed');
-      }
-    } catch (err) {
-      console.warn("Backend login failed/offline. Falling back to local mock authentication.", err);
-      // Fallback for immediate mock validation:
-      const name = email.split('@')[0];
-      const mockUser = {
-        id: 'mock-uid-' + Math.random().toString(36).substr(2, 9),
-        name: name.charAt(0).toUpperCase() + name.slice(1),
-        email: email,
-        role: requestedRole,
-        token: 'mock-jwt-token'
-      };
-      localStorage.setItem('vesta_token', mockUser.token);
-      localStorage.setItem('vesta_user', JSON.stringify(mockUser));
-      setUser(mockUser);
-      addNotification(`Logged in as ${mockUser.name} (Offline Mode)`);
-      return { success: true, user: mockUser };
+    } catch (networkErr) {
+      // fetch() itself threw — backend is unreachable
+      const message = 'Unable to connect. Please try again.';
+      return { success: false, message };
     }
+
+    const data = await res.json();
+
+    if (res.ok) {
+      const loggedUser = {
+        id: data._id || data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role || requestedRole,
+        token: data.token
+      };
+      localStorage.setItem('vesta_token', data.token);
+      localStorage.setItem('vesta_user', JSON.stringify(loggedUser));
+      setUser(loggedUser);
+      addNotification(`Logged in successfully as ${loggedUser.name}!`);
+      return { success: true, user: loggedUser };
+    }
+
+    if (res.status === 401) {
+      const message = 'Invalid email or password. Please check your credentials or sign up first.';
+      return { success: false, message };
+    }
+
+    // Any other non-OK response
+    const message = data.message || 'Login failed. Please try again.';
+    return { success: false, message };
   };
 
   const register = async (name, email, password, requestedRole = 'BUYER') => {
+    let res;
     try {
-      const res = await fetch(`${BASE}/api/auth/register`, {
+      res = await fetch(`${BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, role: requestedRole })
       });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        const loggedUser = {
-          id: data._id || data.id,
-          name: data.name,
-          email: data.email,
-          role: data.role || requestedRole,
-          token: data.token
-        };
-        localStorage.setItem('vesta_token', data.token);
-        localStorage.setItem('vesta_user', JSON.stringify(loggedUser));
-        setUser(loggedUser);
-        addNotification(`Account created successfully! Welcome, ${loggedUser.name}.`);
-        return { success: true, user: loggedUser };
-      } else {
-        throw new Error(data.message || 'Registration failed');
-      }
-    } catch (err) {
-      console.warn("Backend registration failed/offline. Falling back to local mock signup.", err);
-      const mockUser = {
-        id: 'mock-uid-' + Math.random().toString(36).substr(2, 9),
-        name: name,
-        email: email,
-        role: requestedRole,
-        token: 'mock-jwt-token'
-      };
-      localStorage.setItem('vesta_token', mockUser.token);
-      localStorage.setItem('vesta_user', JSON.stringify(mockUser));
-      setUser(mockUser);
-      addNotification(`Registered successfully as ${mockUser.name} (Offline Mode)`);
-      return { success: true, user: mockUser };
+    } catch (networkErr) {
+      // fetch() itself threw — backend is unreachable
+      const message = 'Unable to connect. Please try again.';
+      return { success: false, message };
     }
+
+    const data = await res.json();
+
+    if (res.ok) {
+      const loggedUser = {
+        id: data._id || data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role || requestedRole,
+        token: data.token
+      };
+      localStorage.setItem('vesta_token', data.token);
+      localStorage.setItem('vesta_user', JSON.stringify(loggedUser));
+      setUser(loggedUser);
+      addNotification(`Account created successfully! Welcome, ${loggedUser.name}.`);
+      return { success: true, user: loggedUser };
+    }
+
+    if (res.status === 400) {
+      const message = 'An account with this email already exists. Please login instead.';
+      return { success: false, message };
+    }
+
+    // Any other non-OK response
+    const message = data.message || 'Registration failed. Please try again.';
+    return { success: false, message };
   };
 
   const logout = () => {
