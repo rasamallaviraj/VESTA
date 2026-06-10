@@ -47,14 +47,54 @@ const PropertyDetail = () => {
   useEffect(() => {
     const fetchProperty = async () => {
       setLoading(true);
+      const BASE = import.meta.env.VITE_API_URL || '';
       try {
-        const data = await api.getPropertyById(id);
+        let data = null;
+        if (id && id.startsWith('prop-')) {
+          data = mockProperties.find(p => p.id === id);
+        } else if (id && /^[0-9a-fA-F]{24}$/.test(id)) {
+          const res = await fetch(`${BASE}/api/properties/${id}`);
+          if (res.ok) {
+            data = await res.json();
+          }
+        }
+
         if (data) {
-          setProperty(data);
-          setActiveImage(data.images[0]);
+          const priceHistory = data.priceHistory && data.priceHistory.length > 0 
+            ? data.priceHistory 
+            : [{ year: new Date(data.createdAt || Date.now()).getFullYear().toString(), price: data.askingPrice }];
+          
+          const documents = data.documents && data.documents.length > 0 
+            ? data.documents 
+            : [
+                { name: 'Sale Deed', status: 'Uploaded ✓', file: 'sale_deed.pdf' },
+                { name: 'Encumbrance Certificate', status: 'Uploaded ✓', file: 'ec.pdf' },
+                { name: 'Khata/Patta', status: 'Uploaded ✓', file: 'khata.pdf' }
+              ];
+          
+          const images = data.images && data.images.length > 0
+            ? data.images
+            : ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80'];
+
+          const normalizedProperty = {
+            ...data,
+            id: data.id || data._id,
+            priceHistory,
+            documents,
+            images,
+            viewsCount: data.viewsCount !== undefined ? data.viewsCount : 0,
+            latitude: data.latitude || 17.4483,
+            longitude: data.longitude || 78.3488,
+          };
+
+          setProperty(normalizedProperty);
+          setActiveImage(normalizedProperty.images[0]);
+        } else {
+          setProperty(null);
         }
       } catch (err) {
         console.error("Error loading property detail:", err);
+        setProperty(null);
       } finally {
         setLoading(false);
       }

@@ -19,4 +19,20 @@ const getContactMessages = async (req, res) => {
     }
 };
 
-module.exports = { submitContactForm, getContactMessages };
+const markMessageRead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { read } = req.body;
+        const message = await Contact.findByIdAndUpdate(
+            id,
+            { read: read !== undefined ? read : true },
+            { new: true }
+        );
+        if (!message) return res.status(404).json({ message: 'Message not found' });
+        res.json(message);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+module.exports = { submitContactForm, getContactMessages, markMessageRead };

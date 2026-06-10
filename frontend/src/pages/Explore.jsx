@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, mockProperties } from '../services/api';
 import PropertyCard from '../components/PropertyCard';
 import { Search, SlidersHorizontal, MapPin, IndianRupee, Layers, Grid } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +11,58 @@ const IndianStates = [
   'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 
   'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
 ];
+
+const filterPropertiesLocally = (list, filters) => {
+  let result = [...list];
+
+  if (filters.state) {
+    result = result.filter(p => p.state && p.state.toLowerCase() === filters.state.toLowerCase());
+  }
+  if (filters.city) {
+    result = result.filter(p => p.city && p.city.toLowerCase().includes(filters.city.toLowerCase()));
+  }
+  if (filters.propertyType && filters.propertyType !== 'All') {
+    result = result.filter(p => {
+      const pType = p.propertyType || '';
+      return pType.toLowerCase() === filters.propertyType.toLowerCase();
+    });
+  }
+  if (filters.priceMax) {
+    result = result.filter(p => p.askingPrice <= Number(filters.priceMax));
+  }
+  if (filters.areaMin) {
+    const fMin = Number(filters.areaMin);
+    result = result.filter(p => {
+      if (!p.area) return false;
+      let pAreaSqFt = p.area;
+      if (p.areaUnit === 'acres') pAreaSqFt = p.area * 43560;
+      else if (p.areaUnit === 'cents') pAreaSqFt = p.area * 435.6;
+      else if (p.areaUnit === 'guntha') pAreaSqFt = p.area * 1089;
+
+      let fAreaSqFt = fMin;
+      if (filters.areaUnit === 'acres') fAreaSqFt = fMin * 43560;
+      else if (filters.areaUnit === 'cents') fAreaSqFt = fMin * 435.6;
+      else if (filters.areaUnit === 'guntha') fAreaSqFt = fMin * 1089;
+
+      return pAreaSqFt >= fAreaSqFt;
+    });
+  }
+
+  // Sort
+  if (filters.sort) {
+    if (filters.sort === 'price_asc') {
+      result.sort((a, b) => a.askingPrice - b.askingPrice);
+    } else if (filters.sort === 'price_desc') {
+      result.sort((a, b) => b.askingPrice - a.askingPrice);
+    } else if (filters.sort === 'newest') {
+      result.sort((a, b) => new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now()));
+    } else if (filters.sort === 'ai_recommended') {
+      result.sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0));
+    }
+  }
+
+  return result;
+};
 
 const Explore = ({ compareList, onToggleCompare }) => {
   const { addNotification } = useAuth();
@@ -39,14 +91,21 @@ const Explore = ({ compareList, onToggleCompare }) => {
 
   const fetchListings = async () => {
     setLoading(true);
+    const BASE = import.meta.env.VITE_API_URL || '';
+    let realProperties = [];
     try {
-      const data = await api.getProperties(filters);
-      setProperties(data);
+      const res = await fetch(`${BASE}/api/properties`);
+      if (res.ok) {
+        realProperties = await res.json();
+      }
     } catch (e) {
-      console.error("Error loading properties:", e);
-    } finally {
-      setLoading(false);
+      console.warn("Backend offline or error loading properties. Using mock properties only.", e);
     }
+
+    const combined = [...realProperties, ...mockProperties];
+    const filtered = filterPropertiesLocally(combined, filters);
+    setProperties(filtered);
+    setLoading(false);
   };
 
   useEffect(() => {
