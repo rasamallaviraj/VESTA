@@ -151,7 +151,7 @@ const AppContent = () => {
   }, []);
 
   return (
-    <Router basename={import.meta.env.BASE_URL}>
+    <>
       <Navbar onOpenAuth={(view) => setAuthModal({ isOpen: true, view })} authModal={authModal} setAuthModal={setAuthModal} />
       
       <Routes>
@@ -180,14 +180,16 @@ const AppContent = () => {
       {/* Global Widgets */}
       <MeasurementConverter />
       <CompareBar compareList={compareList} onClear={handleClearCompare} />
-    </Router>
+    </>
   );
 };
 
 const App = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <Router basename={import.meta.env.BASE_URL}>
+        <AppContent />
+      </Router>
     </AuthProvider>
   );
 };
